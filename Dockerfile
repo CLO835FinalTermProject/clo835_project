@@ -1,13 +1,26 @@
-FROM ubuntu:20.04
-RUN apt-get update -y
-COPY . /app
+# Use lighter image
+FROM python:3.9-slim
+
+# Install system packages
+RUN apt-get update && \
+    apt-get install -y default-mysql-client gcc && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set working directory
 WORKDIR /app
-RUN set -xe \
-    && apt-get update -y \
-    && apt-get install -y python3-pip \
-    && apt-get install -y mysql-client 
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
-EXPOSE 8080
-ENTRYPOINT [ "python3" ]
-CMD [ "app.py" ]
+
+# Copy app code
+COPY . .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Create static folder to store background image
+RUN mkdir -p /app/static
+
+# Expose port 81 (as per project)
+EXPOSE 81
+
+# Run Flask app
+ENTRYPOINT ["python3"]
+CMD ["app.py"]
