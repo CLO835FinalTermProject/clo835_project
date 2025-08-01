@@ -34,13 +34,13 @@ def download_image():
         print(f"Error downloading image: {e}")
 
 # Create a connection to the MySQL database
-# db_conn = connections.Connection(
-#     host=DBHOST,
-#     port=DBPORT,
-#     user=DBUSER,
-#     password=DBPWD,
-#     db=DATABASE
-# )
+db_conn = connections.Connection(
+    host=DBHOST,
+    port=DBPORT,
+    user=DBUSER,
+    password=DBPWD,
+    db=DATABASE
+)
 
 # Main Routes
 @app.route("/", methods=["GET", "POST"])
