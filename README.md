@@ -58,65 +58,132 @@ This is a **CLO835 Final Project** that demonstrates a complete modern cloud-nat
 
 ## 🏗️ Architecture
 
-```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   GitHub Repo   │───▶│  GitHub Actions  │───▶│  Amazon ECR     │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-         │                                              │
-         │                                              │
-         ▼                                              ▼
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   Flux (GitOps) │───▶│  Amazon EKS      │◀───│  Docker Image   │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-                              │
-                              ▼
-                    ┌──────────────────┐
-                    │  Application     │
-                    │  ┌─────────────┐ │
-                    │  │   Flask     │ │
-                    │  │   App       │ │
-                    │  └─────────────┘ │
-                    │  ┌─────────────┐ │
-                    │  │   MySQL     │ │
-                    │  │  Database   │ │
-                    │  └─────────────┘ │
-                    └──────────────────┘
-                              │
-                              ▼
-                    ┌──────────────────┐
-                    │  S3 Bucket       │
-                    │  (Background     │
-                    │   Images)        │
-                    └──────────────────┘
-```
+**CI/CD Pipeline:**
+
+- **GitHub Repository** → **GitHub Actions** → **Amazon ECR**
+- Code changes trigger automated builds and push Docker images to ECR
+
+**Deployment:**
+
+- **Flux (GitOps)** monitors the repository and syncs to **Amazon EKS**
+- **EKS Cluster** pulls Docker images from **ECR** and deploys the application
+
+**Application Stack:**
+
+- **Flask Application** (Frontend/Backend)
+- **MySQL Database** (Persistent storage)
+- **S3 Bucket** (Background images)
+
+**Data Flow:**
+
+1. Code pushed to GitHub
+2. GitHub Actions builds and pushes Docker image to ECR
+3. Flux detects changes and deploys to EKS
+4. Application runs with MySQL database
+5. Application fetches background images from S3
 
 ## 📋 Prerequisites
 
 ### 🛠️ Required Tools (AWS Cloud9)
 
-Since you're using AWS Cloud9, most tools are pre-installed. You may need to update some:
+**Complete Cloud9 Setup (Professor's Instructions):**
 
 ```bash
-# Update AWS CLI (if needed)
-pip install --upgrade awscli
+# 1. Configure AWS CLI v2 and disable Cloud9 temporary credentials
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
 
-# Update kubectl (if needed)
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+# Verify AWS CLI version
+/usr/local/bin/aws --version
 
-# Install eksctl (if not already installed)
+# Disable Cloud9 temporary credentials
+/usr/local/bin/aws cloud9 update-environment --environment-id $C9_PID --managed-credentials-action DISABLE
+
+# Remove existing credentials
+rm -vf ${HOME}/.aws/credentials
+
+# 2. Install required tools
+sudo yum -y install jq gettext bash-completion moreutils
+
+# 3. Install eksctl
 curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
-sudo mv /tmp/eksctl /usr/local/bin
+sudo mv -v /tmp/eksctl /usr/local/bin
 
-# Install Flux CLI (for GitOps)
+# Enable eksctl bash completion
+eksctl completion bash >> ~/.bash_completion
+. /etc/profile.d/bash_completion.sh
+. ~/.bash_completion
+
+# 4. Install kubectl (version 1.31.0 as of Winter 2025)
+export VERSION=v1.31.0
+curl -LO "https://dl.k8s.io/release/$VERSION/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+rm -f ./kubectl
+
+# Optional: kubectl bash completion
+kubectl completion bash >> ~/.bash_completion
+. /etc/profile.d/bash_completion.sh
+. ~/.bash_completion
+
+# Optional: Add kubectl alias
+echo "alias k=kubectl" >> ~/.bashrc
+. ~/.bashrc
+
+# 5. Set LoadBalancer Controller version
+echo 'export LBC_VERSION="v2.4.1"' >> ~/.bash_profile
+echo 'export LBC_CHART_VERSION="1.4.1"' >> ~/.bash_profile
+. ~/.bash_profile
+
+# 6. Install Flux CLI (for GitOps)
 curl -s https://fluxcd.io/install.sh | sudo bash
+
+# Optional: Increase disk space of Cloud9
+# https://www.eksworkshop.com/020_prerequisites/workspace/
 ```
+
+**Important Notes:**
+
+- Use AWS CLI v2 (not v1)
+- Disable Cloud9 temporary credentials
+- Use kubectl version 1.31.0 (matches EKS cluster version)
+- Configure permanent AWS credentials from AWS Academy
+- Consider increasing Cloud9 disk space if needed for larger projects
 
 ### 🔑 Required Accounts & Permissions
 
 - **AWS Account** with EKS, ECR, S3, and IAM permissions
 - **GitHub Account** with repository access
 - **AWS IAM User** with programmatic access
+
+### 🔐 AWS Credentials Configuration
+
+**After running the Cloud9 setup commands above:**
+
+1. **Get your AWS Academy credentials** from the AWS Details page
+2. **Configure permanent credentials:**
+
+   ```bash
+   # Use credentials from AWS Academy AWS Details and copy them into ~/.aws/credentials file
+   aws configure
+   # Enter your AWS Access Key ID
+   # Enter your AWS Secret Access Key
+   # Enter your default region (us-east-1)
+   # Enter your output format (json)
+   ```
+
+3. **Alternative: Set environment variables:**
+   ```bash
+   export AWS_ACCESS_KEY_ID=your_key
+   export AWS_SECRET_ACCESS_KEY=your_secret
+   export AWS_DEFAULT_REGION=us-east-1
+   ```
+
+**Troubleshooting:**
+
+- If you have authentication issues, delete the token line in `~/.aws/credentials`
+- Make sure you're using AWS CLI v2, not v1
+- Verify credentials work: `aws sts get-caller-identity`
 
 ### 💰 Cost Estimation
 
@@ -126,47 +193,131 @@ curl -s https://fluxcd.io/install.sh | sudo bash
 - **Load Balancer**: ~$0.0225/hour
 - **Total**: ~$15-20/month for development
 
-## ⚡ Quick Start (5 Minutes)
+## ⚡ Quick Start (Step-by-Step Commands)
 
-### 1. Clone and Configure
-
-```bash
-# Clone the repository
-git clone https://github.com/YOUR_USERNAME/clo835_project.git
-cd clo835_project
-
-# Update configuration files manually (see Detailed Setup section below)
-```
-
-### 2. Create AWS Resources
+### 1. Prerequisites Check
 
 ```bash
-# Configure AWS credentials
+# Verify tools are installed
+eksctl version
+kubectl version --client
+aws --version
+
+# Configure AWS credentials (if not already done)
 aws configure
-
-# Create ECR repository
-aws ecr create-repository --repository-name clo835-final-project --region us-east-1
-
-# Create S3 bucket (replace with your bucket name)
-aws s3 mb s3://your-clo835-background-images --region us-east-1
-
-# Upload a background image
-aws s3 cp /path/to/your/image.jpg s3://your-clo835-background-images/background.jpg
 ```
 
-### 3. Deploy Everything
+### 2. Create S3 Bucket and Upload Background Image
+
+#### Via AWS Console:
+
+1. Go to AWS S3 Console
+2. Click "Create bucket"
+3. **Bucket name**: `clo835-background-images`
+4. **Region**: US East (N. Virginia) us-east-1
+5. **Block Public Access**: Uncheck "Block all public access"
+6. **Object Ownership**: Select "ACLs enabled"
+7. Click "Create bucket"
+
+#### Upload Background Image:
+
+1. Click on your bucket name
+2. Click "Upload"
+3. Create a file called `background.svg` with this content:
+
+```svg
+<svg width="1200" height="800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#764ba2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f093fb;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#grad1)"/>
+  <text x="600" y="300" font-family="Arial, sans-serif" font-size="48" fill="white" text-anchor="middle" font-weight="bold">CLO835 Final Project</text>
+  <text x="600" y="350" font-family="Arial, sans-serif" font-size="24" fill="white" text-anchor="middle">Container Orchestration with Kubernetes</text>
+  <text x="600" y="400" font-family="Arial, sans-serif" font-size="18" fill="white" text-anchor="middle">Hamza - CLO835 Student</text>
+</svg>
+```
+
+4. Upload it as `background.jpg`
+5. Set permissions: "Grant public-read access"
+6. Click "Upload"
+
+### 3. Create EKS Cluster
+
+#### Using ClusterConfig File (Professor's Method):
 
 ```bash
-# Deploy manually (see Deployment section below)
-# Or use the automated deployment commands
+# Create the cluster - these steps will take a few minutes
+# Make sure to edit the eks-config.yaml and specify your Account Id in place of [YOUR AWS ACCOUNT]
+# Update the version entry to ensure we use the version supported by AWS EKS
+
+eksctl create cluster -f eks-config.yaml
+
+# Switch to CloudFormation service, examine the resources that are being created
+# Update your Kube config
+aws eks update-kubeconfig --name clo835-cluster --region us-east-1
+
+# Verify cluster
+kubectl get nodes
 ```
 
-### 4. Access Your Application
+**Important Notes:**
+
+- This takes 15-20 minutes to complete
+- Monitor CloudFormation console to see resources being created
+- If you have problems using "aws configure" and authenticating to K8s, delete the token line in ~/.aws/credentials
+- As a last resort, export your credentials as environment variables:
+  ```bash
+  export AWS_ACCESS_KEY_ID=your_key
+  export AWS_SECRET_ACCESS_KEY=your_secret
+  export AWS_DEFAULT_REGION=us-east-1
+  ```
+
+### 4. Deploy Application
+
+```bash
+# Create namespace
+kubectl create namespace final
+
+# Deploy all resources
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/secret.yaml
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/pvc.yaml
+kubectl apply -f k8s/serviceaccount.yaml
+kubectl apply -f k8s/role.yaml
+kubectl apply -f k8s/mysql-deployment.yaml
+kubectl apply -f k8s/mysql-service.yaml
+kubectl apply -f k8s/flask-deployment.yaml
+kubectl apply -f k8s/flask-service.yaml
+```
+
+### 5. Verify Deployment
+
+```bash
+# Check all resources
+kubectl get all -n final
+
+# Check services
+kubectl get svc -n final
+
+# Check pods
+kubectl get pods -n final
+
+# Watch pods starting up
+kubectl get pods -n final -w
+```
+
+### 6. Access Your Application
 
 ```bash
 # Get the LoadBalancer URL
-kubectl get service flask-service -n final
+kubectl get svc flask-service -n final
 
+# Look for EXTERNAL-IP or LoadBalancer hostname
 # Open the URL in your browser
 ```
 
@@ -182,6 +333,43 @@ aws configure
 # Enter your AWS Secret Access Key
 # Enter your default region (us-east-1)
 # Enter your output format (json)
+```
+
+#### EKS Cluster Configuration
+
+The project includes a working `eks-config.yaml` file that uses existing IAM roles to avoid permission issues:
+
+```yaml
+---
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: clo835-cluster
+  region: "us-east-1"
+  version: "1.29"
+
+availabilityZones: ["us-east-1a", "us-east-1b", "us-east-1c"]
+
+iam:
+  serviceRoleARN: arn:aws:iam::626108377158:role/LabRole
+
+managedNodeGroups:
+  - name: clo835-workers
+    instanceType: t3.medium
+    desiredCapacity: 2
+    minSize: 2
+    maxSize: 4
+    iam:
+      instanceRoleARN: arn:aws:iam::626108377158:role/LabRole
+    ssh:
+      enableSsm: true
+```
+
+**To create the cluster:**
+
+```bash
+eksctl create cluster -f eks-config.yaml
 ```
 
 #### Create IAM Role for S3 Access
@@ -543,7 +731,23 @@ flux get kustomizations
 
 ### Common Issues and Solutions
 
-#### 1. Pod Stuck in Pending
+#### 1. EKS Cluster Creation Fails (IAM Permission Issues)
+
+**Problem**: `eksctl create cluster` fails with IAM permission errors
+
+**Solution**: Use the provided `eks-config.yaml` file that uses existing IAM roles:
+
+```bash
+# Use the working configuration
+eksctl create cluster -f eks-config.yaml
+
+# Alternative: Create cluster via AWS Console
+# Go to EKS Console → Create cluster → Follow the wizard
+```
+
+**Why this works**: The `eks-config.yaml` uses existing `LabRole` instead of trying to create new IAM roles.
+
+#### 2. Pod Stuck in Pending
 
 ```bash
 # Check pod events
