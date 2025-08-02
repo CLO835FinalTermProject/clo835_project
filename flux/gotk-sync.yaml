@@ -5,9 +5,9 @@ metadata:
   namespace: flux-system
 spec:
   interval: 1m
-  url: https://github.com/YOUR_USERNAME/clo835_project
+  url: https://github.com/CLO835FinalTermProject/clo835_project
   ref:
-    branch: main
+    branch: dev-hamza
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -16,7 +16,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 10m
-  path: ./flux
+  path: ./k8s
   prune: true
   sourceRef:
     kind: GitRepository
