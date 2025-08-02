@@ -266,6 +266,7 @@ kubectl apply -f k8s/mysql-deployment.yaml
 kubectl apply -f k8s/mysql-service.yaml
 kubectl apply -f k8s/flask-deployment.yaml
 kubectl apply -f k8s/flask-service.yaml
+kubectl apply -f k8s/hpa.yaml
 ```
 
 ### 5. Verify Deployment
@@ -646,6 +647,42 @@ aws s3 ls s3://your-clo835-background-images
 
 ## 📚 Reference
 
+### 🚀 Quick Deployment Commands
+
+```bash
+# Complete deployment in one go
+eksctl create cluster -f eks-config.yaml
+aws eks update-kubeconfig --name clo835-cluster --region us-east-1
+kubectl apply -f k8s/
+kubectl get all -n final
+```
+
+### 🔧 Quick Update Commands
+
+```bash
+# Update ConfigMap
+kubectl patch configmap app-config -n final -p '{"data":{"BACKGROUND_IMAGE_URL":"https://new-image-url"}}'
+
+# Restart deployment to pick up changes
+kubectl rollout restart deployment/flask-app -n final
+
+# Check status
+kubectl get pods -n final
+```
+
+### 🧪 Quick Testing Commands
+
+```bash
+# Test application
+curl $(kubectl get svc flask-service -n final -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+
+# Test database
+kubectl exec -it deployment/mysql -n final -- mysql -u root -p -e "SHOW DATABASES;"
+
+# Load test for HPA
+hey -n 1000 -c 10 http://$(kubectl get svc flask-service -n final -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+```
+
 ### Useful Commands Cheat Sheet
 
 #### Kubernetes Commands
@@ -734,6 +771,34 @@ MY_NAME=Your Name (CLO835 Student)
 - **EKS Cluster**: https://console.aws.amazon.com/eks/clusters/clo835-cluster
 - **S3 Bucket**: https://console.aws.amazon.com/s3/buckets/your-clo835-background-images
 
+## 📸 Screenshots & Demo
+
+### Application Screenshots
+
+- **Home Page**: Show the application with background image and student name
+- **Add Employee**: Demonstrate adding new employee records
+- **Get Employee**: Show retrieving employee information
+- **Database Persistence**: Show data persistence after pod restart
+
+### Deployment Screenshots
+
+- **EKS Cluster**: Kubernetes dashboard showing running pods
+- **LoadBalancer**: Application accessible via internet
+- **HPA in Action**: Auto-scaling demonstration
+- **GitHub Actions**: CI/CD pipeline success
+
+### Demo Video Requirements
+
+1. **Local Testing**: Docker container running locally
+2. **GitHub Actions**: Show automated build and push to ECR
+3. **EKS Deployment**: Deploy all manifests to empty namespace
+4. **S3 Integration**: Background image loading from private S3 bucket
+5. **Data Persistence**: Delete/recreate MySQL pod, data remains
+6. **Internet Access**: LoadBalancer URL accessible from browser
+7. **ConfigMap Update**: Change background image, see changes
+8. **Bonus HPA**: Load testing showing auto-scaling
+9. **Bonus Flux**: GitOps deployment automation
+
 ## 🎓 Assignment Submission Checklist
 
 Before submitting your assignment, ensure you have:
@@ -795,6 +860,16 @@ Before submitting your assignment, ensure you have:
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
 
 ---
+
+## 📋 Version Information
+
+- **Kubernetes Version**: 1.29.0
+- **EKS Version**: 1.29
+- **Flask Version**: Latest
+- **MySQL Version**: 8.0
+- **Docker Base Image**: python:3.9-slim
+- **AWS Region**: us-east-1
+- **Last Updated**: Winter 2025
 
 ## 📄 License
 
