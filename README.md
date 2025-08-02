@@ -115,8 +115,8 @@ eksctl completion bash >> ~/.bash_completion
 . /etc/profile.d/bash_completion.sh
 . ~/.bash_completion
 
-# 4. Install kubectl (version 1.31.0 as of Winter 2025)
-export VERSION=v1.31.0
+# 4. Install kubectl (version 1.29.0 as of Winter 2025)
+export VERSION=v1.29.0
 curl -LO "https://dl.k8s.io/release/$VERSION/bin/linux/amd64/kubectl"
 sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 rm -f ./kubectl
