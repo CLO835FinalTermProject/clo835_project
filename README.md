@@ -6,7 +6,6 @@
 [![Docker](https://img.shields.io/badge/Docker-Containerized-blue?logo=docker)](https://www.docker.com/)
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-Orchestrated-blue?logo=kubernetes)](https://kubernetes.io/)
 [![AWS EKS](https://img.shields.io/badge/AWS-EKS-orange?logo=amazon-aws)](https://aws.amazon.com/eks/)
-[![Flux](https://img.shields.io/badge/Flux-GitOps-purple?logo=flux)](https://fluxcd.io/)
 
 ## 📋 Table of Contents
 
@@ -18,7 +17,7 @@
 - [🚀 Deployment](#-deployment)
 - [🧪 Testing](#-testing)
 - [📊 Monitoring & Scaling](#-monitoring--scaling)
-- [🔄 GitOps with Flux](#-gitops-with-flux)
+
 - [🔍 Troubleshooting](#-troubleshooting)
 - [🧹 Cleanup](#-cleanup)
 - [📚 Reference](#-reference)
@@ -37,7 +36,6 @@ This is a **CLO835 Final Project** that demonstrates a complete modern cloud-nat
 - **📦 Container Registry** on Amazon ECR
 - **☸️ Kubernetes Orchestration** on Amazon EKS
 - **📈 Auto-scaling** with Horizontal Pod Autoscaler (HPA)
-- **🔄 GitOps** deployment with Flux (Bonus)
 
 ### 🏆 Assignment Requirements Met
 
@@ -54,7 +52,6 @@ This is a **CLO835 Final Project** that demonstrates a complete modern cloud-nat
 - ✅ Role/RoleBinding for namespace permissions
 - ✅ LoadBalancer service for internet access
 - ✅ HPA for auto-scaling (Bonus)
-- ✅ Flux GitOps deployment (Bonus)
 
 ## 🏗️ Architecture
 
@@ -65,7 +62,7 @@ This is a **CLO835 Final Project** that demonstrates a complete modern cloud-nat
 
 **Deployment:**
 
-- **Flux (GitOps)** monitors the repository and syncs to **Amazon EKS**
+- **GitHub Actions** builds and pushes Docker images to **ECR**
 - **EKS Cluster** pulls Docker images from **ECR** and deploys the application
 
 **Application Stack:**
@@ -78,7 +75,7 @@ This is a **CLO835 Final Project** that demonstrates a complete modern cloud-nat
 
 1. Code pushed to GitHub
 2. GitHub Actions builds and pushes Docker image to ECR
-3. Flux detects changes and deploys to EKS
+3. Manual deployment to EKS using kubectl
 4. Application runs with MySQL database
 5. Application fetches background images from S3
 
@@ -178,8 +175,7 @@ echo 'export LBC_VERSION="v2.4.1"' >> ~/.bash_profile
 echo 'export LBC_CHART_VERSION="1.4.1"' >> ~/.bash_profile
 . ~/.bash_profile
 
-# 6. Install Flux CLI (for GitOps)
-curl -s https://fluxcd.io/install.sh | sudo bash
+
 ```
 
 **Important Notes:**
@@ -422,8 +418,7 @@ AWS_SECRET_ACCESS_KEY=your_secret_key
 #### Update Repository URLs
 
 ```bash
-# Update Flux configuration with your GitHub username
-sed -i 's/YOUR_USERNAME/your-actual-github-username/g' flux/gotk-sync.yaml
+
 ```
 
 ## 🚀 Deployment
@@ -442,24 +437,6 @@ kubectl apply -f k8s/
 
 # Check deployment status
 kubectl get all -n final
-```
-
-### Option 2: GitOps Deployment with Flux
-
-```bash
-# Install Flux CLI
-curl -s https://fluxcd.io/install.sh | sudo bash
-
-# Bootstrap Flux
-flux bootstrap github \
-  --owner=YOUR_USERNAME \
-  --repository=clo835_project \
-  --branch=main \
-  --path=./flux \
-  --personal
-
-# Apply Flux resources
-kubectl apply -f flux/gotk-sync.yaml
 ```
 
 ## 🧪 Testing
@@ -557,43 +534,6 @@ kubectl scale deployment flask-app --replicas=3 -n final
 
 # Check scaling
 kubectl get pods -n final
-```
-
-## 🔄 GitOps with Flux
-
-### Flux Commands
-
-```bash
-# Check Flux status
-flux get all
-
-# Check GitRepository
-flux get sources git
-
-# Check Kustomization
-flux get kustomizations
-
-# Check Flux logs
-flux logs
-
-# Reconcile manually
-flux reconcile source git clo835-final-project
-flux reconcile kustomization clo835-final-project
-```
-
-### Update Application via GitOps
-
-```bash
-# Make changes to your manifests
-vim k8s/configmap.yaml
-
-# Commit and push
-git add .
-git commit -m "Update background image URL"
-git push origin main
-
-# Flux will automatically detect and apply changes
-flux get kustomizations
 ```
 
 ## 🔍 Troubleshooting
@@ -968,7 +908,6 @@ MY_NAME=Hamza Hassan, Sanjan Joshua, Rentian Zhang (CLO835 Students)
 6. **Internet Access**: LoadBalancer URL accessible from browser
 7. **ConfigMap Update**: Change background image, see changes
 8. **Bonus HPA**: Load testing showing auto-scaling
-9. **Bonus Flux**: GitOps deployment automation
 
 ## 🎓 Assignment Submission Checklist
 
@@ -1017,7 +956,7 @@ Before submitting your assignment, ensure you have:
 - ✅ **Bonus Features**
 
   - [ ] HPA configured and working
-  - [ ] Flux GitOps deployed (optional)
+
   - [ ] Auto-scaling demonstrated
 
 - ✅ **Documentation**
@@ -1045,7 +984,7 @@ Before submitting your assignment, ensure you have:
 
 - [Kubernetes Documentation](https://kubernetes.io/docs/)
 - [AWS EKS Documentation](https://docs.aws.amazon.com/eks/)
-- [Flux Documentation](https://fluxcd.io/docs/)
+
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
 
 ---
@@ -1066,4 +1005,4 @@ This project is created for educational purposes as part of the CLO835 course at
 
 ---
 
-**🎉 Congratulations! You now have a complete, production-ready containerized application deployed on Amazon EKS with full CI/CD pipeline and GitOps capabilities!**
+**🎉 Congratulations! You now have a complete, production-ready containerized application deployed on Amazon EKS with full CI/CD pipeline and auto-scaling capabilities!**
