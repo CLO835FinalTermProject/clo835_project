@@ -82,6 +82,49 @@ This is a **CLO835 Final Project** that demonstrates a complete modern cloud-nat
 4. Application runs with MySQL database
 5. Application fetches background images from S3
 
+## 🔒 Security Best Practices
+
+### ⚠️ **CRITICAL: Never Commit Credentials!**
+
+**This project contains sensitive AWS credentials. Follow these security practices:**
+
+1. **Never commit credentials to Git**
+
+   - AWS access keys, secret keys, and session tokens
+   - Database passwords
+   - Private keys or certificates
+
+2. **Use .gitignore properly**
+
+   - The `.gitignore` file is configured to exclude sensitive files
+   - Always check what you're committing with `git status`
+
+3. **Use temporary files for secrets**
+
+   - Create secrets dynamically during deployment
+   - Delete temporary files immediately after use
+
+4. **Rotate credentials regularly**
+
+   - AWS Academy credentials expire automatically
+   - Update your local credentials when they change
+
+5. **Check your commits**
+   - Use `git log --oneline` to review recent commits
+   - If credentials were accidentally committed, remove them immediately
+
+### 🛡️ **If Credentials Were Committed:**
+
+```bash
+# Remove from git history (if credentials were committed)
+git filter-branch --force --index-filter \
+  "git rm --cached --ignore-unmatch k8s/aws-credentials-secret.yaml" \
+  --prune-empty --tag-name-filter cat -- --all
+
+# Force push to remove from remote repository
+git push origin --force --all
+```
+
 ## 📋 Prerequisites
 
 ### 🛠️ Required Tools (AWS Cloud9)
@@ -255,14 +298,17 @@ kubectl get nodes
 # Create namespace
 kubectl create namespace final
 
-# Deploy all resources
+# Deploy all resources (excluding credentials)
 kubectl apply -f k8s/namespace.yaml
 kubectl apply -f k8s/secret.yaml
 kubectl apply -f k8s/configmap.yaml
 kubectl apply -f k8s/pvc.yaml
 kubectl apply -f k8s/serviceaccount.yaml
 kubectl apply -f k8s/role.yaml
-kubectl apply -f k8s/aws-credentials-secret.yaml
+
+# Deploy AWS credentials secret (created dynamically)
+# Follow the "Update AWS Credentials Secret" section above
+
 kubectl apply -f k8s/mysql-deployment.yaml
 kubectl apply -f k8s/mysql-service.yaml
 kubectl apply -f k8s/flask-deployment.yaml
@@ -330,6 +376,8 @@ sed -i "s/YOUR_ACCOUNT_ID/$AWS_ACCOUNT_ID/g" k8s/serviceaccount.yaml
 
 #### Update AWS Credentials Secret
 
+**⚠️ IMPORTANT: Never commit credentials to Git!**
+
 ```bash
 # Get your AWS credentials from ~/.aws/credentials
 AWS_ACCESS_KEY=$(grep aws_access_key_id ~/.aws/credentials | cut -d'=' -f2 | tr -d ' ')
@@ -341,10 +389,23 @@ ACCESS_KEY_B64=$(echo -n "$AWS_ACCESS_KEY" | base64)
 SECRET_KEY_B64=$(echo -n "$AWS_SECRET_KEY" | base64)
 SESSION_TOKEN_B64=$(echo -n "$AWS_SESSION_TOKEN" | base64)
 
-# Update the secret file
-sed -i "s/YOUR_BASE64_ENCODED_ACCESS_KEY/$ACCESS_KEY_B64/g" k8s/aws-credentials-secret.yaml
-sed -i "s/YOUR_BASE64_ENCODED_SECRET_KEY/$SECRET_KEY_B64/g" k8s/aws-credentials-secret.yaml
-sed -i "s/YOUR_BASE64_ENCODED_SESSION_TOKEN/$SESSION_TOKEN_B64/g" k8s/aws-credentials-secret.yaml
+# Create a temporary secret file (DO NOT COMMIT THIS!)
+cat > k8s/aws-credentials-secret-temp.yaml << EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: aws-credentials
+  namespace: final
+type: Opaque
+data:
+  access-key-id: $ACCESS_KEY_B64
+  secret-access-key: $SECRET_KEY_B64
+  session-token: $SESSION_TOKEN_B64
+EOF
+
+# Apply the secret and then delete the temp file
+kubectl apply -f k8s/aws-credentials-secret-temp.yaml
+rm k8s/aws-credentials-secret-temp.yaml
 ```
 
 ### Step 2: GitHub Configuration
@@ -673,7 +734,21 @@ aws s3 ls s3://your-clo835-background-images
 # Complete deployment in one go
 eksctl create cluster -f eks-config.yaml
 aws eks update-kubeconfig --name clo835-final-project --region us-east-1
-kubectl apply -f k8s/
+
+# Deploy all resources (excluding credentials)
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/secret.yaml
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/pvc.yaml
+kubectl apply -f k8s/serviceaccount.yaml
+kubectl apply -f k8s/role.yaml
+kubectl apply -f k8s/mysql-deployment.yaml
+kubectl apply -f k8s/mysql-service.yaml
+kubectl apply -f k8s/flask-deployment.yaml
+kubectl apply -f k8s/flask-service.yaml
+kubectl apply -f k8s/hpa.yaml
+
+# Create AWS credentials secret (follow detailed instructions above)
 kubectl get all -n final
 ```
 
@@ -822,6 +897,24 @@ MY_NAME=Your Name (CLO835 Student)
 ## 🎓 Assignment Submission Checklist
 
 Before submitting your assignment, ensure you have:
+
+### 🔒 **Security Checklist (CRITICAL!)**
+
+- [ ] **No credentials committed to Git**
+
+  - [ ] AWS access keys not in repository
+  - [ ] AWS secret keys not in repository
+  - [ ] AWS session tokens not in repository
+  - [ ] Database passwords not in repository
+  - [ ] All sensitive files in .gitignore
+
+- [ ] **Repository is secure**
+  - [ ] Run `git log --oneline` to check recent commits
+  - [ ] No sensitive data in commit history
+  - [ ] .gitignore properly configured
+  - [ ] Credentials handled dynamically during deployment
+
+### 📋 **Project Requirements Checklist**
 
 - ✅ **Application Enhancement**
 
