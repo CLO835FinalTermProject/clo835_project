@@ -237,7 +237,7 @@ aws sts get-caller-identity
 eksctl create cluster -f eks-config.yaml
 
 # Update your Kube config
-aws eks update-kubeconfig --name clo835-cluster --region us-east-1
+aws eks update-kubeconfig --name clo835-final-project --region us-east-1
 
 # Verify cluster
 kubectl get nodes
@@ -262,6 +262,7 @@ kubectl apply -f k8s/configmap.yaml
 kubectl apply -f k8s/pvc.yaml
 kubectl apply -f k8s/serviceaccount.yaml
 kubectl apply -f k8s/role.yaml
+kubectl apply -f k8s/aws-credentials-secret.yaml
 kubectl apply -f k8s/mysql-deployment.yaml
 kubectl apply -f k8s/mysql-service.yaml
 kubectl apply -f k8s/flask-deployment.yaml
@@ -327,6 +328,25 @@ sed -i "s/YOUR_ACCOUNT_ID/$AWS_ACCOUNT_ID/g" k8s/flask-deployment.yaml
 sed -i "s/YOUR_ACCOUNT_ID/$AWS_ACCOUNT_ID/g" k8s/serviceaccount.yaml
 ```
 
+#### Update AWS Credentials Secret
+
+```bash
+# Get your AWS credentials from ~/.aws/credentials
+AWS_ACCESS_KEY=$(grep aws_access_key_id ~/.aws/credentials | cut -d'=' -f2 | tr -d ' ')
+AWS_SECRET_KEY=$(grep aws_secret_access_key ~/.aws/credentials | cut -d'=' -f2 | tr -d ' ')
+AWS_SESSION_TOKEN=$(grep aws_session_token ~/.aws/credentials | cut -d'=' -f2 | tr -d ' ')
+
+# Base64 encode the credentials
+ACCESS_KEY_B64=$(echo -n "$AWS_ACCESS_KEY" | base64)
+SECRET_KEY_B64=$(echo -n "$AWS_SECRET_KEY" | base64)
+SESSION_TOKEN_B64=$(echo -n "$AWS_SESSION_TOKEN" | base64)
+
+# Update the secret file
+sed -i "s/YOUR_BASE64_ENCODED_ACCESS_KEY/$ACCESS_KEY_B64/g" k8s/aws-credentials-secret.yaml
+sed -i "s/YOUR_BASE64_ENCODED_SECRET_KEY/$SECRET_KEY_B64/g" k8s/aws-credentials-secret.yaml
+sed -i "s/YOUR_BASE64_ENCODED_SESSION_TOKEN/$SESSION_TOKEN_B64/g" k8s/aws-credentials-secret.yaml
+```
+
 ### Step 2: GitHub Configuration
 
 #### Set Up GitHub Secrets
@@ -354,7 +374,7 @@ sed -i 's/YOUR_USERNAME/your-actual-github-username/g' flux/gotk-sync.yaml
 eksctl create cluster -f eks-config.yaml
 
 # Update kubeconfig
-aws eks update-kubeconfig --name clo835-cluster --region us-east-1
+aws eks update-kubeconfig --name clo835-final-project --region us-east-1
 
 # Deploy all resources
 kubectl apply -f k8s/
@@ -623,7 +643,7 @@ kubectl delete -f k8s/ --ignore-not-found=true
 kubectl delete namespace final --ignore-not-found=true
 
 # Delete EKS cluster
-eksctl delete cluster --name clo835-cluster --region us-east-1
+eksctl delete cluster --name clo835-final-project --region us-east-1
 
 # Delete ECR repository
 aws ecr delete-repository --repository-name clo835-final-project --force --region us-east-1
@@ -652,7 +672,7 @@ aws s3 ls s3://your-clo835-background-images
 ```bash
 # Complete deployment in one go
 eksctl create cluster -f eks-config.yaml
-aws eks update-kubeconfig --name clo835-cluster --region us-east-1
+aws eks update-kubeconfig --name clo835-final-project --region us-east-1
 kubectl apply -f k8s/
 kubectl get all -n final
 ```
@@ -768,7 +788,7 @@ MY_NAME=Your Name (CLO835 Student)
 
 - **Application**: http://LOADBALANCER_URL
 - **ECR Repository**: https://console.aws.amazon.com/ecr/repositories/clo835-final-project
-- **EKS Cluster**: https://console.aws.amazon.com/eks/clusters/clo835-cluster
+- **EKS Cluster**: https://console.aws.amazon.com/eks/clusters/clo835-final-project
 - **S3 Bucket**: https://console.aws.amazon.com/s3/buckets/your-clo835-background-images
 
 ## 📸 Screenshots & Demo
