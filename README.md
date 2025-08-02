@@ -265,11 +265,11 @@ aws sts get-caller-identity
   <rect width="100%" height="100%" fill="url(#grad1)"/>
   <text x="600" y="300" font-family="Arial, sans-serif" font-size="48" fill="white" text-anchor="middle" font-weight="bold">CLO835 Final Project</text>
   <text x="600" y="350" font-family="Arial, sans-serif" font-size="24" fill="white" text-anchor="middle">Container Orchestration with Kubernetes</text>
-  <text x="600" y="400" font-family="Arial, sans-serif" font-size="18" fill="white" text-anchor="middle">Hamza - CLO835 Student</text>
+  <text x="600" y="400" font-family="Arial, sans-serif" font-size="18" fill="white" text-anchor="middle">Hamza, Sanjan Joshua, Rentian Zhang - CLO835 Students</text>
 </svg>
 ```
 
-4. Upload it as `background.jpg`
+4. Upload it as `background.svg`
 5. Set permissions: "Grant public-read access"
 6. Click "Upload"
 
@@ -353,8 +353,8 @@ kubectl get svc flask-service -n final
 vim k8s/configmap.yaml
 
 # Replace with your actual values:
-# BACKGROUND_IMAGE_URL: "https://your-clo835-background-images.s3.amazonaws.com/background.jpg"
-# MY_NAME: "Your Name (CLO835 Student)"
+# BACKGROUND_IMAGE_URL: "https://your-clo835-background-images.s3.amazonaws.com/background.svg"
+# MY_NAME: "Hamza, Sanjan Joshua, Rentian Zhang (CLO835 Students)"
 ```
 
 #### Update Flask Deployment
@@ -675,6 +675,78 @@ kubectl get service flask-service -n final
 kubectl describe service flask-service -n final
 ```
 
+### Recent Deployment Issues and Solutions
+
+#### Issue 1: AWS Credentials Secret Not Found
+
+**Problem**: Flask pod fails with `Error: secret "aws-credentials" not found`
+
+**Root Cause**: The deployment was trying to use AWS credentials from a secret that doesn't exist.
+
+**Solution**: Remove AWS credential environment variables from the deployment since we're using IRSA:
+
+```bash
+# Delete the problematic deployment
+kubectl delete deployment flask-app -n final
+
+# Edit k8s/flask-deployment.yaml to remove AWS credential env vars
+# Remove these lines:
+# - name: AWS_ACCESS_KEY_ID
+#   valueFrom:
+#     secretKeyRef:
+#       name: aws-credentials
+#       key: access-key-id
+# - name: AWS_SECRET_ACCESS_KEY
+#   valueFrom:
+#     secretKeyRef:
+#       name: aws-credentials
+#       key: secret-access-key
+# - name: AWS_SESSION_TOKEN
+#   valueFrom:
+#     secretKeyRef:
+#       name: aws-credentials
+#       key: session-token
+
+# Reapply the fixed deployment
+kubectl apply -f k8s/flask-deployment.yaml
+```
+
+#### Issue 2: PVC Stuck in Pending Status
+
+**Problem**: MySQL pod can't schedule because PVC is not bound
+
+**Root Cause**: EBS CSI driver not installed or not working properly
+
+**Solution**: Install the EBS CSI driver addon:
+
+```bash
+# Install EBS CSI driver
+eksctl create addon --name aws-ebs-csi-driver --cluster clo835-final-project --region us-east-1 --force
+
+# Check PVC status
+kubectl get pvc -n final
+
+# Check EBS CSI driver pods
+kubectl get pods -n kube-system | grep ebs
+```
+
+#### Issue 3: No Worker Nodes Available
+
+**Problem**: `0/2 nodes are available: no nodes available to schedule pods`
+
+**Root Cause**: EKS cluster created without worker nodes
+
+**Solution**: Ensure the eks-config.yaml includes managedNodeGroups:
+
+```yaml
+managedNodeGroups:
+  - name: clo835-workers
+    instanceType: t3.medium
+    desiredCapacity: 2
+    minSize: 2
+    maxSize: 4
+```
+
 ### Debug Commands
 
 ```bash
@@ -735,7 +807,10 @@ aws s3 ls s3://your-clo835-background-images
 eksctl create cluster -f eks-config.yaml
 aws eks update-kubeconfig --name clo835-final-project --region us-east-1
 
-# Deploy all resources (excluding credentials)
+# Install EBS CSI driver (required for PVC)
+eksctl create addon --name aws-ebs-csi-driver --cluster clo835-final-project --region us-east-1 --force
+
+# Deploy all resources
 kubectl apply -f k8s/namespace.yaml
 kubectl apply -f k8s/secret.yaml
 kubectl apply -f k8s/configmap.yaml
@@ -748,8 +823,9 @@ kubectl apply -f k8s/flask-deployment.yaml
 kubectl apply -f k8s/flask-service.yaml
 kubectl apply -f k8s/hpa.yaml
 
-# Create AWS credentials secret (follow detailed instructions above)
+# Check deployment status
 kubectl get all -n final
+kubectl get pvc -n final
 ```
 
 ### 🔧 Quick Update Commands
@@ -855,8 +931,8 @@ DATABASE=employees
 DBPORT=3306
 
 # Application
-BACKGROUND_IMAGE_URL=https://your-s3-bucket.s3.amazonaws.com/background.jpg
-MY_NAME=Your Name (CLO835 Student)
+BACKGROUND_IMAGE_URL=https://your-s3-bucket.s3.amazonaws.com/background.svg
+MY_NAME=Hamza Hassan, Sanjan Joshua, Rentian Zhang (CLO835 Students)
 ```
 
 #### Important URLs
