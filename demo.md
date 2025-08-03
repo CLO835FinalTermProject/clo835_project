@@ -366,7 +366,7 @@ _"We'll now demonstrate dynamic configuration management by updating our backgro
 aws s3 cp background-new.svg s3://clo835-final-project-bucket-g5/background-new.svg
 
 # Update ConfigMap with new image URL
-kubectl patch configmap app-config -n final -p '{"data":{"BACKGROUND_IMAGE_URL":"https://clo835-final-project-bucket-g5.s3.us-east-1.amazonaws.com/background-new.svg"}}'
+kubectl apply -f k8s/configmap.yaml
 
 # Restart the deployment to pick up changes
 kubectl rollout restart deployment/flask-app -n final
